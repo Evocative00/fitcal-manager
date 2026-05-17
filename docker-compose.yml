@@ -1,0 +1,51 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: fitcal-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: fitcaldb
+      MYSQL_USER: fitcal
+      MYSQL_PASSWORD: fitcal1234
+      MYSQL_ROOT_PASSWORD: root1234
+    volumes:
+      - fitcal-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot1234"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fitcal-backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/fitcaldb?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+      SPRING_DATASOURCE_USERNAME: fitcal
+      SPRING_DATASOURCE_PASSWORD: fitcal1234
+      SPRING_DATASOURCE_DRIVER: com.mysql.cj.jdbc.Driver
+    ports:
+      - "8080:8080"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: fitcal-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+volumes:
+  fitcal-mysql-data:
