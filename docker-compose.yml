@@ -8,10 +8,15 @@ services:
       MYSQL_USER: fitcal
       MYSQL_PASSWORD: fitcal1234
       MYSQL_ROOT_PASSWORD: root1234
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    ports:
+      - "13306:3306"
     volumes:
       - fitcal-mysql-data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot1234"]
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot1234" ]
       interval: 5s
       timeout: 5s
       retries: 20
