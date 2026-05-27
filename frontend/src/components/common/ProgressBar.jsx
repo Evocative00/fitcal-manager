@@ -1,5 +1,7 @@
-export default function ProgressBar({ value, max }) {
-  const percentage = (value / max) * 100;
+export default function ProgressBar({ value = 0, max = 0 }) {
+  const safeValue = Number.isFinite(Number(value)) ? Number(value) : 0;
+  const safeMax = Number.isFinite(Number(max)) ? Number(max) : 0;
+  const percentage = safeMax > 0 ? Math.min((safeValue / safeMax) * 100, 100) : 0;
 
   return (
     <div>
@@ -11,7 +13,7 @@ export default function ProgressBar({ value, max }) {
       </div>
 
       <p className="text-sm text-slate-500 mt-1">
-        {value} / {max}
+        {safeValue} / {safeMax}
       </p>
     </div>
   );

@@ -33,7 +33,11 @@ public class NutritionService {
         double tdee = round(bmr * request.activityLevel().getMultiplier());
 
         NutritionStrategy strategy = strategyMap.get(request.goalType());
-        NutritionResult   result   = strategy.calculate(tdee, request.weightKg());
+        if (strategy == null) {
+            throw new IllegalArgumentException("지원하지 않는 목표 타입입니다: " + request.goalType());
+        }
+
+        NutritionResult result = strategy.calculate(tdee, request.weightKg());
 
         return new NutritionResponse(
                 request.goalType(),
@@ -41,8 +45,8 @@ public class NutritionService {
                 round(bmr),
                 round(tdee),
                 round(result.targetCalories()),
-                round(result.targetProtein()),
                 round(result.targetCarbs()),
+                round(result.targetProtein()),
                 round(result.targetFat()),
                 result.message()
         );

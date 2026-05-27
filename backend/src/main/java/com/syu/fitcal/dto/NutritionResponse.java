@@ -8,8 +8,8 @@ public record NutritionResponse(
         double bmr,
         double tdee,
         double targetCalories,
-        double targetProtein,
         double targetCarbs,
+        double targetProtein,
         double targetFat,
         String message
 ) {}
