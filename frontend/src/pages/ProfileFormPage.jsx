@@ -53,7 +53,11 @@ export default function ProfileFormPage() {
       return `${emptyField[1]}을(를) 입력해주세요.`;
     }
 
-    if (Number.isNaN(Number(profile.age)) || Number.isNaN(Number(profile.heightCm)) || Number.isNaN(Number(profile.weightKg))) {
+    if (
+      Number.isNaN(Number(profile.age)) ||
+      Number.isNaN(Number(profile.heightCm)) ||
+      Number.isNaN(Number(profile.weightKg))
+    ) {
       return "나이, 키, 몸무게는 숫자로 입력해주세요.";
     }
 
@@ -93,6 +97,7 @@ export default function ProfileFormPage() {
 
     try {
       const profileRequest = buildProfileRequest();
+
       const profileResponse = await api.post("/profiles", profileRequest);
       localStorage.setItem("profileId", String(profileResponse.data.id));
 
