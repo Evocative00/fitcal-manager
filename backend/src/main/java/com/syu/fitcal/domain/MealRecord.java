@@ -86,6 +86,23 @@ public class MealRecord {
         this.createdAt = LocalDateTime.now();
     }
 
+    /**
+     * PUT 요청에 대응하는 전체 필드 갱신.
+     * recordedDate가 null이면 기존 날짜를 유지합니다.
+     */
+    public void update(String foodName, MealType mealType, Double calories,
+                       Double proteinG, Double carbsG, Double fatG, LocalDate recordedDate) {
+        this.foodName  = foodName;
+        this.mealType  = mealType;
+        this.calories  = calories;
+        this.proteinG  = proteinG;
+        this.carbsG    = carbsG;
+        this.fatG      = fatG;
+        if (recordedDate != null) {
+            this.recordedDate = recordedDate;
+        }
+    }
+
     public Long getId()                 { return id; }
     public UserProfile getUserProfile() { return userProfile; }
     public String getFoodName()         { return foodName; }
