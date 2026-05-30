@@ -71,8 +71,8 @@ public class NutritionService {
                 round(bmr),
                 round(tdee),
                 round(result.targetCalories()),
-                round(result.targetProtein()),
                 round(result.targetCarbs()),
+                round(result.targetProtein()),
                 round(result.targetFat()),
                 result.message()
         );

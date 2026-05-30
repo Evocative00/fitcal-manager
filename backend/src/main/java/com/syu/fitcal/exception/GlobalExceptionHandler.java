@@ -20,6 +20,7 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of(status.value(), status.getReasonPhrase(), exception.getMessage()));
     }
 
+
     @ExceptionHandler(MealRecordNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleMealRecordNotFound(MealRecordNotFoundException exception) {
         HttpStatus status = HttpStatus.NOT_FOUND;
@@ -45,6 +46,13 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.status(status)
                 .body(ErrorResponse.of(status.value(), status.getReasonPhrase(), "입력값이 올바르지 않습니다.", details));
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException exception) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        return ResponseEntity.status(status)
+                .body(ErrorResponse.of(status.value(), status.getReasonPhrase(), exception.getMessage()));
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
