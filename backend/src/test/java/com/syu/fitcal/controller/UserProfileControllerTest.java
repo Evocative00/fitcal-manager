@@ -2,6 +2,7 @@ package com.syu.fitcal.controller;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.syu.fitcal.repository.MealRecordRepository;
 import com.syu.fitcal.repository.UserProfileRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,10 +29,15 @@ class UserProfileControllerTest {
     private ObjectMapper objectMapper;
 
     @Autowired
+    private MealRecordRepository mealRecordRepository;
+
+    @Autowired
     private UserProfileRepository userProfileRepository;
 
     @BeforeEach
     void setUp() {
+        // MealRecord → UserProfile FK 제약으로 인해 자식 테이블을 먼저 삭제
+        mealRecordRepository.deleteAll();
         userProfileRepository.deleteAll();
     }
 
