@@ -1,34 +1,22 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import api from "../api/api";
+import PageHero from "../components/common/PageHero";
+import StatusBanner from "../components/common/StatusBanner";
+import MetricCard from "../components/common/MetricCard";
 import CaloriesCard from "../components/dashboard/CaloriesCard";
 import RemainingCaloriesCard from "../components/dashboard/RemainingCaloriesCard";
 import GoalProgressCard from "../components/dashboard/GoalProgressCard";
 import FeedbackCard from "../components/dashboard/FeedbackCard";
 import NutritionProgress from "../components/dashboard/NutritionProgress";
+import MacroBalanceChart from "../components/dashboard/MacroBalanceChart";
 import {
   buildDashboardData,
   defaultConsumedNutrition,
   emptyMealSummary,
 } from "../mock/DashboardData";
-
-function todayString() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function loadJsonFromStorage(key) {
-  try {
-    const storedValue = localStorage.getItem(key);
-    return storedValue ? JSON.parse(storedValue) : null;
-  } catch (error) {
-    console.error(`${key} 파싱 실패`, error);
-    return null;
-  }
-}
-
-function loadProfileId() {
-  return localStorage.getItem("profileId");
-}
+import { formatGram, formatKcal, todayString } from "../utils/formatters";
+import { loadJsonFromStorage, loadProfileId } from "../utils/storage";
 
 function getApiErrorMessage(error) {
   const data = error.response?.data;
@@ -68,17 +56,18 @@ function createFeedback(data) {
 
 function EmptyDashboardState() {
   return (
-    <main className="min-h-screen bg-slate-50 px-6 py-10">
-      <section className="mx-auto max-w-3xl rounded-lg border border-slate-200 bg-white p-8 text-center shadow-sm">
-        <h1 className="mb-3 text-2xl font-bold text-slate-900">
+    <main className="px-5 py-10 md:px-8">
+      <section className="mx-auto max-w-3xl rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+        <p className="text-sm font-bold text-emerald-600">nutritionResult 필요</p>
+        <h1 className="mt-2 text-2xl font-black text-slate-950">
           먼저 권장량을 계산해주세요
         </h1>
-        <p className="mb-6 text-slate-500">
+        <p className="mt-3 text-slate-500">
           대시보드는 권장량 기준으로 목표 칼로리와 탄단지 목표를 표시합니다.
         </p>
         <Link
           to="/profile"
-          className="inline-flex rounded-lg bg-emerald-500 px-5 py-3 font-semibold text-white transition hover:bg-emerald-600"
+          className="mt-6 inline-flex rounded-2xl bg-emerald-500 px-5 py-3 font-bold text-white transition hover:bg-emerald-600"
         >
           권장량 계산하기
         </Link>
@@ -89,17 +78,18 @@ function EmptyDashboardState() {
 
 function MissingProfileState() {
   return (
-    <main className="min-h-screen bg-slate-50 px-6 py-10">
-      <section className="mx-auto max-w-3xl rounded-lg border border-slate-200 bg-white p-8 text-center shadow-sm">
-        <h1 className="mb-3 text-2xl font-bold text-slate-900">
+    <main className="px-5 py-10 md:px-8">
+      <section className="mx-auto max-w-3xl rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+        <p className="text-sm font-bold text-emerald-600">profileId 필요</p>
+        <h1 className="mt-2 text-2xl font-black text-slate-950">
           프로필 정보가 없습니다
         </h1>
-        <p className="mb-6 text-slate-500">
+        <p className="mt-3 text-slate-500">
           대시보드의 실제 식단 요약은 localStorage의 profileId를 기준으로 조회합니다.
         </p>
         <Link
           to="/profile"
-          className="inline-flex rounded-lg bg-emerald-500 px-5 py-3 font-semibold text-white transition hover:bg-emerald-600"
+          className="mt-6 inline-flex rounded-2xl bg-emerald-500 px-5 py-3 font-bold text-white transition hover:bg-emerald-600"
         >
           프로필 입력하기
         </Link>
@@ -110,30 +100,29 @@ function MissingProfileState() {
 
 function MealSummaryCard({ date, mealCount, isLoading, errorMessage }) {
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+    <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
       <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-sm font-semibold text-slate-700">식단 요약</h2>
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-600">meal summary</p>
+          <h2 className="mt-1 text-lg font-black text-slate-950">식단 요약</h2>
           <p className="mt-1 text-sm text-slate-500">
             {date} 기준으로 등록된 식단 기록을 합산합니다.
           </p>
         </div>
         <Link
           to="/meals"
-          className="rounded-lg bg-slate-800 px-4 py-2 text-center text-sm font-semibold text-white transition hover:bg-slate-900"
+          className="rounded-2xl bg-slate-900 px-4 py-3 text-center text-sm font-bold text-white transition hover:bg-slate-800"
         >
           식단 기록하기
         </Link>
       </div>
 
       {errorMessage ? (
-        <p className="whitespace-pre-line rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
-          {errorMessage}
-        </p>
+        <StatusBanner type="error">{errorMessage}</StatusBanner>
       ) : (
-        <p className="rounded-lg bg-slate-50 px-4 py-3 text-sm text-slate-600">
+        <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-600">
           {isLoading ? "식단 요약을 불러오는 중입니다." : `${mealCount}건의 식단 기록이 반영되었습니다.`}
-        </p>
+        </div>
       )}
     </section>
   );
@@ -149,11 +138,11 @@ export default function DashboardPage() {
   const [summaryErrorMessage, setSummaryErrorMessage] = useState("");
 
   useEffect(() => {
-    const fetchMealSummary = async () => {
-      if (!profileId) {
-        return;
-      }
+    if (!profileId) {
+      return undefined;
+    }
 
+    const timerId = window.setTimeout(async () => {
       setIsLoadingSummary(true);
       setSummaryErrorMessage("");
 
@@ -172,9 +161,9 @@ export default function DashboardPage() {
       } finally {
         setIsLoadingSummary(false);
       }
-    };
+    }, 0);
 
-    fetchMealSummary();
+    return () => window.clearTimeout(timerId);
   }, [profileId, selectedDate]);
 
   if (!nutritionResult) {
@@ -196,38 +185,44 @@ export default function DashboardPage() {
   const feedback = createFeedback(dashboardData);
 
   return (
-    <main className="min-h-screen bg-slate-50 px-6 py-10">
-      <section className="mx-auto max-w-5xl">
-        <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="mb-1 text-sm font-semibold text-emerald-600">
-              {nutritionResult.goalLabel || nutritionResult.goalType || "목표"}
-            </p>
-            <h1 className="text-2xl font-bold text-slate-900">
-              오늘의 대시보드
-            </h1>
-            <p className="mt-1 text-sm text-slate-500">
-              profileId: {dashboardData.profileId}
-            </p>
+    <main className="px-5 py-10 md:px-8">
+      <section className="mx-auto max-w-7xl space-y-6">
+        <PageHero
+          eyebrow="daily progress"
+          title="목표와 실제 섭취량을 비교하세요"
+          description="권장량 계산 결과와 식단 기록 summary API를 연결해 오늘의 칼로리와 탄단지 진행률을 보여줍니다."
+          actions={
+            <>
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(event) => setSelectedDate(event.target.value)}
+                className="rounded-2xl border border-slate-200 bg-white px-4 py-3 font-semibold text-slate-700 shadow-sm outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+              />
+              <Link
+                to="/meals"
+                className="rounded-2xl bg-emerald-500 px-5 py-3 text-center font-bold text-white transition hover:-translate-y-0.5 hover:bg-emerald-600"
+              >
+                식단 기록하기
+              </Link>
+              <Link
+                to="/profile"
+                className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-center font-bold text-slate-700 transition hover:-translate-y-0.5 hover:bg-slate-50"
+              >
+                다시 계산하기
+              </Link>
+            </>
+          }
+        >
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            <MetricCard label="profileId" value={dashboardData.profileId} helper="현재 사용자" />
+            <MetricCard label="목표 칼로리" value={formatKcal(dashboardData.target.calories)} tone="emerald" />
+            <MetricCard label="섭취 칼로리" value={formatKcal(dashboardData.consumed.calories)} tone="sky" />
+            <MetricCard label="식단 기록" value={`${dashboardData.mealCount}건`} helper={dashboardData.date} />
           </div>
+        </PageHero>
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(event) => setSelectedDate(event.target.value)}
-              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-slate-700"
-            />
-            <Link
-              to="/profile"
-              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-center font-semibold text-slate-700 transition hover:bg-slate-100"
-            >
-              다시 계산하기
-            </Link>
-          </div>
-        </div>
-
-        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <CaloriesCard
             consumed={dashboardData.consumed.calories}
             target={dashboardData.target.calories}
@@ -244,38 +239,19 @@ export default function DashboardPage() {
           />
         </div>
 
-        <div className="mb-6">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_420px]">
           <NutritionProgress nutrition={dashboardData.nutrition} />
+          <MacroBalanceChart nutrition={dashboardData.nutrition} />
         </div>
 
-        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-4">
-          <div className="rounded-lg border border-slate-200 bg-white p-4">
-            <p className="text-sm text-slate-500">목표 칼로리</p>
-            <p className="mt-1 text-xl font-bold text-slate-900">
-              {dashboardData.target.calories.toLocaleString()} kcal
-            </p>
-          </div>
-          <div className="rounded-lg border border-slate-200 bg-white p-4">
-            <p className="text-sm text-slate-500">목표 탄수화물</p>
-            <p className="mt-1 text-xl font-bold text-slate-900">
-              {dashboardData.target.carbs.toLocaleString()} g
-            </p>
-          </div>
-          <div className="rounded-lg border border-slate-200 bg-white p-4">
-            <p className="text-sm text-slate-500">목표 단백질</p>
-            <p className="mt-1 text-xl font-bold text-slate-900">
-              {dashboardData.target.protein.toLocaleString()} g
-            </p>
-          </div>
-          <div className="rounded-lg border border-slate-200 bg-white p-4">
-            <p className="text-sm text-slate-500">목표 지방</p>
-            <p className="mt-1 text-xl font-bold text-slate-900">
-              {dashboardData.target.fat.toLocaleString()} g
-            </p>
-          </div>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+          <MetricCard label="목표 탄수화물" value={formatGram(dashboardData.target.carbs)} />
+          <MetricCard label="목표 단백질" value={formatGram(dashboardData.target.protein)} />
+          <MetricCard label="목표 지방" value={formatGram(dashboardData.target.fat)} />
+          <MetricCard label="현재 지방 섭취" value={formatGram(dashboardData.consumed.fat)} tone="amber" />
         </div>
 
-        <div className="space-y-6">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_420px]">
           <FeedbackCard feedback={feedback} />
           <MealSummaryCard
             date={dashboardData.date}
