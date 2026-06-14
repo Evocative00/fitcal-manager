@@ -4,6 +4,8 @@ import com.syu.fitcal.domain.MealRecord;
 import com.syu.fitcal.domain.UserProfile;
 import com.syu.fitcal.dto.MealRecordCreateRequest;
 import com.syu.fitcal.dto.MealRecordResponse;
+import com.syu.fitcal.dto.MealRecordUpdateRequest;
+import com.syu.fitcal.dto.MealSummaryResponse;
 import com.syu.fitcal.exception.MealRecordNotFoundException;
 import com.syu.fitcal.exception.ProfileNotFoundException;
 import com.syu.fitcal.repository.MealRecordRepository;
@@ -31,8 +33,7 @@ public class MealRecordService {
 
     @Transactional
     public MealRecordResponse create(MealRecordCreateRequest request) {
-        UserProfile profile = userProfileRepository.findById(request.profileId())
-                .orElseThrow(() -> new ProfileNotFoundException(request.profileId()));
+        UserProfile profile = getProfile(request.profileId());
 
         MealRecord saved = mealRecordRepository.save(request.toEntity(profile));
         return MealRecordResponse.from(saved);
@@ -41,7 +42,7 @@ public class MealRecordService {
     /**
      * 특정 프로필의 식사 기록을 조회합니다.
      *
-     * @param profileId   조회할 프로필 ID
+     * @param profileId    조회할 프로필 ID
      * @param recordedDate 날짜 필터 (null이면 전체 조회)
      */
     public List<MealRecordResponse> findByProfile(Long profileId, LocalDate recordedDate) {
@@ -60,9 +61,49 @@ public class MealRecordService {
     }
 
     public MealRecordResponse findById(Long id) {
-        MealRecord record = mealRecordRepository.findById(id)
-                .orElseThrow(() -> new MealRecordNotFoundException(id));
+        MealRecord record = getMealRecord(id);
         return MealRecordResponse.from(record);
+    }
+
+    @Transactional
+    public MealRecordResponse update(Long id, MealRecordUpdateRequest request) {
+        MealRecord record = getMealRecord(id);
+        UserProfile profile = getProfile(request.profileId());
+
+        record.update(
+                profile,
+                request.foodName(),
+                request.mealType(),
+                request.calories(),
+                request.proteinG(),
+                request.carbsG(),
+                request.fatG(),
+                request.recordedDate()
+        );
+
+        return MealRecordResponse.from(record);
+    }
+
+    public MealSummaryResponse summarize(Long profileId, LocalDate recordedDate) {
+        getProfile(profileId);
+
+        List<MealRecord> records = mealRecordRepository
+                .findByUserProfileIdAndRecordedDateOrderByMealType(profileId, recordedDate);
+
+        double consumedCalories = records.stream().mapToDouble(MealRecord::getCalories).sum();
+        double consumedCarbs = records.stream().mapToDouble(MealRecord::getCarbsG).sum();
+        double consumedProtein = records.stream().mapToDouble(MealRecord::getProteinG).sum();
+        double consumedFat = records.stream().mapToDouble(MealRecord::getFatG).sum();
+
+        return new MealSummaryResponse(
+                profileId,
+                recordedDate,
+                consumedCalories,
+                consumedCarbs,
+                consumedProtein,
+                consumedFat,
+                (long) records.size()
+        );
     }
 
     @Transactional
@@ -71,5 +112,15 @@ public class MealRecordService {
             throw new MealRecordNotFoundException(id);
         }
         mealRecordRepository.deleteById(id);
+    }
+
+    private UserProfile getProfile(Long profileId) {
+        return userProfileRepository.findById(profileId)
+                .orElseThrow(() -> new ProfileNotFoundException(profileId));
+    }
+
+    private MealRecord getMealRecord(Long id) {
+        return mealRecordRepository.findById(id)
+                .orElseThrow(() -> new MealRecordNotFoundException(id));
     }
 }

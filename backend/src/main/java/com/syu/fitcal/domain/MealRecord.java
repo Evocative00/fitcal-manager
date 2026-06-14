@@ -86,6 +86,26 @@ public class MealRecord {
         this.createdAt = LocalDateTime.now();
     }
 
+    public void update(
+            UserProfile userProfile,
+            String foodName,
+            MealType mealType,
+            Double calories,
+            Double proteinG,
+            Double carbsG,
+            Double fatG,
+            LocalDate recordedDate
+    ) {
+        this.userProfile = userProfile;
+        this.foodName = foodName.trim();
+        this.mealType = mealType;
+        this.calories = calories;
+        this.proteinG = proteinG;
+        this.carbsG = carbsG;
+        this.fatG = fatG;
+        this.recordedDate = recordedDate;
+    }
+
     public Long getId()                 { return id; }
     public UserProfile getUserProfile() { return userProfile; }
     public String getFoodName()         { return foodName; }

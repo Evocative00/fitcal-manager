@@ -1,23 +1,30 @@
-# 3주차 식단 기록 기능 API 명세 초안
+# 3주차 식단 기록 기능 API 명세
 
-이 문서는 3주차 식단 CRUD 구현을 바로 시작할 수 있도록 작성한 초안입니다. 실제 구현 시 팀 회의에서 필드 추가/삭제를 확정합니다.
+이 문서는 2주차 초안에서 실제 3주차 코드 기준으로 수정한 식단 기록 API 명세다.
 
-## 1. MealRecord 데이터 구조 초안
+중요 고정값:
+
+- 식단 API endpoint는 `/api/meals`를 사용한다.
+- `/api/meal-records`는 사용하지 않는다.
+- 날짜 필드는 `mealDate`가 아니라 `recordedDate`를 사용한다.
+- 영양소 필드는 `protein`, `carbs`, `fat`이 아니라 `proteinG`, `carbsG`, `fatG`를 사용한다.
+- 프론트는 `localStorage.profileId`를 `profileId`로 사용한다.
+
+## 1. MealRecord 데이터 구조
 
 | 필드명 | 타입 | 필수 | 설명 |
 |---|---:|---:|---|
 | `id` | number | 응답 | 식단 기록 id |
-| `profileId` | number | O | 프로필 id. 프론트는 localStorage의 `profileId` 사용 |
-| `mealDate` | string | O | 식사 날짜, `YYYY-MM-DD` |
-| `mealType` | enum | O | `BREAKFAST`, `LUNCH`, `DINNER`, `SNACK` |
+| `profileId` | number | O | 프로필 id |
 | `foodName` | string | O | 음식명 |
+| `mealType` | enum | O | `BREAKFAST`, `LUNCH`, `DINNER`, `SNACK` |
+| `mealTypeLabel` | string | 응답 | `아침`, `점심`, `저녁`, `간식` |
 | `calories` | number | O | 섭취 칼로리, kcal |
-| `carbs` | number | O | 탄수화물, g |
-| `protein` | number | O | 단백질, g |
-| `fat` | number | O | 지방, g |
-| `memo` | string | 선택 | 메모 |
+| `proteinG` | number | O | 단백질, g |
+| `carbsG` | number | O | 탄수화물, g |
+| `fatG` | number | O | 지방, g |
+| `recordedDate` | string | O | 식단 기록 날짜, `YYYY-MM-DD` |
 | `createdAt` | string | 응답 | 생성 시각 |
-| `updatedAt` | string | 응답 | 수정 시각 |
 
 ## 2. Enum 값
 
@@ -31,21 +38,20 @@
 ## 3. 식단 기록 생성
 
 ```http
-POST /api/meal-records
+POST /api/meals
 Content-Type: application/json
 ```
 
 ```json
 {
   "profileId": 1,
-  "mealDate": "2026-05-27",
-  "mealType": "BREAKFAST",
   "foodName": "현미밥과 닭가슴살",
+  "mealType": "BREAKFAST",
   "calories": 520,
-  "carbs": 65,
-  "protein": 38,
-  "fat": 12,
-  "memo": "아침 식사"
+  "proteinG": 38,
+  "carbsG": 65,
+  "fatG": 12,
+  "recordedDate": "2026-05-27"
 }
 ```
 
@@ -55,23 +61,22 @@ Content-Type: application/json
 {
   "id": 1,
   "profileId": 1,
-  "mealDate": "2026-05-27",
-  "mealType": "BREAKFAST",
   "foodName": "현미밥과 닭가슴살",
+  "mealType": "BREAKFAST",
+  "mealTypeLabel": "아침",
   "calories": 520,
-  "carbs": 65,
-  "protein": 38,
-  "fat": 12,
-  "memo": "아침 식사",
-  "createdAt": "2026-05-27T15:30:00",
-  "updatedAt": "2026-05-27T15:30:00"
+  "proteinG": 38,
+  "carbsG": 65,
+  "fatG": 12,
+  "recordedDate": "2026-05-27",
+  "createdAt": "2026-05-27T15:30:00"
 }
 ```
 
 ## 4. 특정 날짜 식단 목록 조회
 
 ```http
-GET /api/meal-records?profileId=1&mealDate=2026-05-27
+GET /api/meals?profileId=1&date=2026-05-27
 ```
 
 ### Response 200
@@ -81,16 +86,15 @@ GET /api/meal-records?profileId=1&mealDate=2026-05-27
   {
     "id": 1,
     "profileId": 1,
-    "mealDate": "2026-05-27",
-    "mealType": "BREAKFAST",
     "foodName": "현미밥과 닭가슴살",
+    "mealType": "BREAKFAST",
+    "mealTypeLabel": "아침",
     "calories": 520,
-    "carbs": 65,
-    "protein": 38,
-    "fat": 12,
-    "memo": "아침 식사",
-    "createdAt": "2026-05-27T15:30:00",
-    "updatedAt": "2026-05-27T15:30:00"
+    "proteinG": 38,
+    "carbsG": 65,
+    "fatG": 12,
+    "recordedDate": "2026-05-27",
+    "createdAt": "2026-05-27T15:30:00"
   }
 ]
 ```
@@ -98,33 +102,69 @@ GET /api/meal-records?profileId=1&mealDate=2026-05-27
 ## 5. 식단 기록 단건 조회
 
 ```http
-GET /api/meal-records/{id}
+GET /api/meals/{id}
+```
+
+### Response 200
+
+```json
+{
+  "id": 1,
+  "profileId": 1,
+  "foodName": "현미밥과 닭가슴살",
+  "mealType": "BREAKFAST",
+  "mealTypeLabel": "아침",
+  "calories": 520,
+  "proteinG": 38,
+  "carbsG": 65,
+  "fatG": 12,
+  "recordedDate": "2026-05-27",
+  "createdAt": "2026-05-27T15:30:00"
+}
 ```
 
 ## 6. 식단 기록 수정
 
 ```http
-PUT /api/meal-records/{id}
+PUT /api/meals/{id}
 Content-Type: application/json
 ```
 
 ```json
 {
-  "mealDate": "2026-05-27",
-  "mealType": "LUNCH",
+  "profileId": 1,
   "foodName": "닭가슴살 샐러드",
+  "mealType": "LUNCH",
   "calories": 430,
-  "carbs": 35,
-  "protein": 45,
-  "fat": 14,
-  "memo": "점심 식사"
+  "proteinG": 45,
+  "carbsG": 35,
+  "fatG": 14,
+  "recordedDate": "2026-05-27"
+}
+```
+
+### Response 200
+
+```json
+{
+  "id": 1,
+  "profileId": 1,
+  "foodName": "닭가슴살 샐러드",
+  "mealType": "LUNCH",
+  "mealTypeLabel": "점심",
+  "calories": 430,
+  "proteinG": 45,
+  "carbsG": 35,
+  "fatG": 14,
+  "recordedDate": "2026-05-27",
+  "createdAt": "2026-05-27T15:30:00"
 }
 ```
 
 ## 7. 식단 기록 삭제
 
 ```http
-DELETE /api/meal-records/{id}
+DELETE /api/meals/{id}
 ```
 
 ### Response 204
@@ -133,10 +173,10 @@ DELETE /api/meal-records/{id}
 
 ## 8. 하루 섭취량 요약 조회
 
-대시보드 연동을 위해 3주차 구현 후보로 둡니다.
+대시보드 연동을 위해 사용한다.
 
 ```http
-GET /api/meal-records/summary?profileId=1&mealDate=2026-05-27
+GET /api/meals/summary?profileId=1&date=2026-05-27
 ```
 
 ### Response 200
@@ -144,18 +184,33 @@ GET /api/meal-records/summary?profileId=1&mealDate=2026-05-27
 ```json
 {
   "profileId": 1,
-  "mealDate": "2026-05-27",
-  "consumedCalories": 1450,
-  "consumedCarbs": 180,
-  "consumedProtein": 90,
-  "consumedFat": 45
+  "date": "2026-05-27",
+  "consumedCalories": 950,
+  "consumedCarbs": 100,
+  "consumedProtein": 83,
+  "consumedFat": 26,
+  "mealCount": 2
 }
 ```
 
-## 9. 3주차 구현 우선순위 제안
+식단이 없는 날짜는 아래처럼 0으로 반환한다.
 
-1. `MealRecord` Entity / Repository / DTO 작성
-2. `POST /api/meal-records` 생성 API 구현
-3. `GET /api/meal-records?profileId=&mealDate=` 날짜별 목록 조회 구현
-4. DashboardPage에서 요약 API 또는 localStorage mock 데이터를 읽는 구조로 연결
-5. 수정/삭제 API 구현
+```json
+{
+  "profileId": 1,
+  "date": "2026-05-28",
+  "consumedCalories": 0,
+  "consumedCarbs": 0,
+  "consumedProtein": 0,
+  "consumedFat": 0,
+  "mealCount": 0
+}
+```
+
+## 9. 3주차 구현 우선순위
+
+1. `PUT /api/meals/{id}` 구현
+2. `GET /api/meals/summary?profileId=&date=` 구현
+3. `/meals` 프론트 화면 구현
+4. `/dashboard`에서 summary API 연동
+5. 테스트와 통합 체크리스트 기준으로 검증

@@ -6,8 +6,13 @@ export const defaultConsumedNutrition = {
 };
 
 export const emptyMealSummary = {
+  profileId: null,
+  date: new Date().toISOString().slice(0, 10),
+  consumedCalories: 0,
+  consumedCarbs: 0,
+  consumedProtein: 0,
+  consumedFat: 0,
   mealCount: 0,
-  meals: [],
 };
 
 function toSafeNumber(value) {
@@ -24,6 +29,7 @@ export function buildDashboardData({
   profileId = null,
   consumed = defaultConsumedNutrition,
   mealSummary = emptyMealSummary,
+  date = new Date().toISOString().slice(0, 10),
 }) {
   const target = {
     calories: toSafeNumber(nutritionResult?.targetCalories),
@@ -41,7 +47,7 @@ export function buildDashboardData({
 
   return {
     profileId,
-    date: new Date().toISOString().slice(0, 10),
+    date,
     target,
     consumed: consumedNutrition,
     remainingCalories: target.calories - consumedNutrition.calories,
@@ -63,7 +69,6 @@ export function buildDashboardData({
         rate: getRate(consumedNutrition.fat, target.fat),
       },
     },
-    meals: mealSummary.meals,
-    mealCount: mealSummary.mealCount,
+    mealCount: toSafeNumber(mealSummary.mealCount),
   };
 }

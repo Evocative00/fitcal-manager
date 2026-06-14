@@ -1,4 +1,6 @@
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import api from "../api/api";
 import CaloriesCard from "../components/dashboard/CaloriesCard";
 import RemainingCaloriesCard from "../components/dashboard/RemainingCaloriesCard";
 import GoalProgressCard from "../components/dashboard/GoalProgressCard";
@@ -9,6 +11,10 @@ import {
   defaultConsumedNutrition,
   emptyMealSummary,
 } from "../mock/DashboardData";
+
+function todayString() {
+  return new Date().toISOString().slice(0, 10);
+}
 
 function loadJsonFromStorage(key) {
   try {
@@ -24,6 +30,16 @@ function loadProfileId() {
   return localStorage.getItem("profileId");
 }
 
+function getApiErrorMessage(error) {
+  const data = error.response?.data;
+
+  if (data?.details?.length > 0) {
+    return data.details.join("\n");
+  }
+
+  return data?.message || "식단 요약 API 호출 중 오류가 발생했습니다. 백엔드 실행 상태를 확인해주세요.";
+}
+
 function createFeedback(data) {
   const { target, consumed, remainingCalories, nutrition } = data;
 
@@ -36,7 +52,7 @@ function createFeedback(data) {
   }
 
   if (consumed.calories === 0) {
-    return "아직 기록된 식단이 없습니다. 3주차 식단 기록 기능이 연결되면 오늘 섭취량이 자동으로 반영됩니다.";
+    return "아직 기록된 식단이 없습니다. 식단 기록 화면에서 오늘 먹은 음식을 등록해보세요.";
   }
 
   if (nutrition.protein.rate < 50) {
@@ -71,35 +87,52 @@ function EmptyDashboardState() {
   );
 }
 
-function MealSummaryCard({ mealCount, meals }) {
+function MissingProfileState() {
   return (
-    <section className="rounded-lg border border-dashed border-slate-300 bg-white p-5">
-      <div className="mb-4 flex items-center justify-between gap-3">
+    <main className="min-h-screen bg-slate-50 px-6 py-10">
+      <section className="mx-auto max-w-3xl rounded-lg border border-slate-200 bg-white p-8 text-center shadow-sm">
+        <h1 className="mb-3 text-2xl font-bold text-slate-900">
+          프로필 정보가 없습니다
+        </h1>
+        <p className="mb-6 text-slate-500">
+          대시보드의 실제 식단 요약은 localStorage의 profileId를 기준으로 조회합니다.
+        </p>
+        <Link
+          to="/profile"
+          className="inline-flex rounded-lg bg-emerald-500 px-5 py-3 font-semibold text-white transition hover:bg-emerald-600"
+        >
+          프로필 입력하기
+        </Link>
+      </section>
+    </main>
+  );
+}
+
+function MealSummaryCard({ date, mealCount, isLoading, errorMessage }) {
+  return (
+    <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-sm font-semibold text-slate-700">
-            오늘 식단 기록
-          </h2>
+          <h2 className="text-sm font-semibold text-slate-700">식단 요약</h2>
           <p className="mt-1 text-sm text-slate-500">
-            3주차 식단 기록 기능에서 profileId 기준으로 연결될 영역입니다.
+            {date} 기준으로 등록된 식단 기록을 합산합니다.
           </p>
         </div>
-        <span className="shrink-0 rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-600">
-          {mealCount}건
-        </span>
+        <Link
+          to="/meals"
+          className="rounded-lg bg-slate-800 px-4 py-2 text-center text-sm font-semibold text-white transition hover:bg-slate-900"
+        >
+          식단 기록하기
+        </Link>
       </div>
 
-      {meals.length > 0 ? (
-        <ul className="divide-y divide-slate-100">
-          {meals.map((meal) => (
-            <li key={meal.id} className="flex items-center justify-between py-3 text-sm">
-              <span className="font-medium text-slate-700">{meal.name}</span>
-              <span className="text-slate-500">{meal.calories.toLocaleString()} kcal</span>
-            </li>
-          ))}
-        </ul>
+      {errorMessage ? (
+        <p className="whitespace-pre-line rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+          {errorMessage}
+        </p>
       ) : (
-        <p className="rounded-lg bg-slate-50 px-4 py-3 text-sm text-slate-500">
-          아직 등록된 식단 기록이 없습니다.
+        <p className="rounded-lg bg-slate-50 px-4 py-3 text-sm text-slate-600">
+          {isLoading ? "식단 요약을 불러오는 중입니다." : `${mealCount}건의 식단 기록이 반영되었습니다.`}
         </p>
       )}
     </section>
@@ -109,16 +142,56 @@ function MealSummaryCard({ mealCount, meals }) {
 export default function DashboardPage() {
   const location = useLocation();
   const nutritionResult = location.state?.nutritionResult || loadJsonFromStorage("nutritionResult");
+  const profileId = loadProfileId();
+  const [selectedDate, setSelectedDate] = useState(todayString());
+  const [mealSummary, setMealSummary] = useState(emptyMealSummary);
+  const [isLoadingSummary, setIsLoadingSummary] = useState(false);
+  const [summaryErrorMessage, setSummaryErrorMessage] = useState("");
+
+  useEffect(() => {
+    const fetchMealSummary = async () => {
+      if (!profileId) {
+        return;
+      }
+
+      setIsLoadingSummary(true);
+      setSummaryErrorMessage("");
+
+      try {
+        const response = await api.get("/meals/summary", {
+          params: {
+            profileId,
+            date: selectedDate,
+          },
+        });
+        setMealSummary(response.data);
+      } catch (error) {
+        console.error(error);
+        setMealSummary({ ...emptyMealSummary, profileId, date: selectedDate });
+        setSummaryErrorMessage(getApiErrorMessage(error));
+      } finally {
+        setIsLoadingSummary(false);
+      }
+    };
+
+    fetchMealSummary();
+  }, [profileId, selectedDate]);
 
   if (!nutritionResult) {
     return <EmptyDashboardState />;
   }
 
+  if (!profileId) {
+    return <MissingProfileState />;
+  }
+
+  const consumed = mealSummary || defaultConsumedNutrition;
   const dashboardData = buildDashboardData({
     nutritionResult,
-    profileId: loadProfileId(),
-    consumed: defaultConsumedNutrition,
-    mealSummary: emptyMealSummary,
+    profileId,
+    consumed,
+    mealSummary,
+    date: selectedDate,
   });
   const feedback = createFeedback(dashboardData);
 
@@ -133,19 +206,25 @@ export default function DashboardPage() {
             <h1 className="text-2xl font-bold text-slate-900">
               오늘의 대시보드
             </h1>
-            {dashboardData.profileId && (
-              <p className="mt-1 text-sm text-slate-500">
-                profileId: {dashboardData.profileId}
-              </p>
-            )}
+            <p className="mt-1 text-sm text-slate-500">
+              profileId: {dashboardData.profileId}
+            </p>
           </div>
 
-          <Link
-            to="/profile"
-            className="rounded-lg border border-slate-200 bg-white px-4 py-2 font-semibold text-slate-700 transition hover:bg-slate-100"
-          >
-            다시 계산하기
-          </Link>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(event) => setSelectedDate(event.target.value)}
+              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-slate-700"
+            />
+            <Link
+              to="/profile"
+              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-center font-semibold text-slate-700 transition hover:bg-slate-100"
+            >
+              다시 계산하기
+            </Link>
+          </div>
         </div>
 
         <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -198,7 +277,12 @@ export default function DashboardPage() {
 
         <div className="space-y-6">
           <FeedbackCard feedback={feedback} />
-          <MealSummaryCard mealCount={dashboardData.mealCount} meals={dashboardData.meals} />
+          <MealSummaryCard
+            date={dashboardData.date}
+            mealCount={dashboardData.mealCount}
+            isLoading={isLoadingSummary}
+            errorMessage={summaryErrorMessage}
+          />
         </div>
       </section>
     </main>
