@@ -1,12 +1,13 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../api/api";
+import PageHero from "../components/common/PageHero";
+import StatusBanner from "../components/common/StatusBanner";
+import MetricCard from "../components/common/MetricCard";
 import MealRecordForm from "../components/meals/MealRecordForm";
 import MealRecordList from "../components/meals/MealRecordList";
-
-function todayString() {
-  return new Date().toISOString().slice(0, 10);
-}
+import { formatGram, formatKcal, todayString } from "../utils/formatters";
+import { loadProfileId } from "../utils/storage";
 
 function getApiErrorMessage(error) {
   const data = error.response?.data;
@@ -18,23 +19,32 @@ function getApiErrorMessage(error) {
   return data?.message || "식단 API 호출 중 오류가 발생했습니다. 백엔드 실행 상태를 확인해주세요.";
 }
 
-function loadProfileId() {
-  return localStorage.getItem("profileId");
+function calculateTotals(meals) {
+  return meals.reduce(
+    (acc, meal) => ({
+      calories: acc.calories + Number(meal.calories || 0),
+      carbs: acc.carbs + Number(meal.carbsG || 0),
+      protein: acc.protein + Number(meal.proteinG || 0),
+      fat: acc.fat + Number(meal.fatG || 0),
+    }),
+    { calories: 0, carbs: 0, protein: 0, fat: 0 },
+  );
 }
 
 function MissingProfileState() {
   return (
-    <main className="min-h-screen bg-slate-50 px-6 py-10">
-      <section className="mx-auto max-w-3xl rounded-2xl bg-white p-8 text-center shadow-sm">
-        <h1 className="mb-3 text-2xl font-bold text-slate-900">
+    <main className="px-5 py-10 md:px-8">
+      <section className="mx-auto max-w-3xl rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+        <p className="text-sm font-bold text-emerald-600">profileId 필요</p>
+        <h1 className="mt-2 text-2xl font-black text-slate-950">
           먼저 프로필을 등록해주세요
         </h1>
-        <p className="mb-6 text-slate-500">
+        <p className="mt-3 text-slate-500">
           식단 기록은 localStorage의 profileId를 기준으로 저장됩니다.
         </p>
         <Link
           to="/profile"
-          className="inline-flex rounded-xl bg-emerald-500 px-5 py-3 font-semibold text-white transition hover:bg-emerald-600"
+          className="mt-6 inline-flex rounded-2xl bg-emerald-500 px-5 py-3 font-bold text-white transition hover:bg-emerald-600"
         >
           프로필 입력하러 가기
         </Link>
@@ -48,9 +58,11 @@ export default function MealRecordPage() {
   const [selectedDate, setSelectedDate] = useState(todayString());
   const [meals, setMeals] = useState([]);
   const [editingMeal, setEditingMeal] = useState(null);
+  const [formResetKey, setFormResetKey] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const totals = useMemo(() => calculateTotals(meals), [meals]);
 
   const fetchMeals = useCallback(async (date = selectedDate) => {
     if (!profileId) {
@@ -77,7 +89,11 @@ export default function MealRecordPage() {
   }, [profileId, selectedDate]);
 
   useEffect(() => {
-    fetchMeals();
+    const timerId = window.setTimeout(() => {
+      fetchMeals();
+    }, 0);
+
+    return () => window.clearTimeout(timerId);
   }, [fetchMeals]);
 
   if (!profileId) {
@@ -102,6 +118,7 @@ export default function MealRecordPage() {
       }
 
       setSelectedDate(request.recordedDate);
+      setFormResetKey((prev) => prev + 1);
       await fetchMeals(request.recordedDate);
     } catch (error) {
       console.error(error);
@@ -123,6 +140,7 @@ export default function MealRecordPage() {
       await api.delete(`/meals/${mealId}`);
       if (editingMeal?.id === mealId) {
         setEditingMeal(null);
+        setFormResetKey((prev) => prev + 1);
       }
       await fetchMeals();
     } catch (error) {
@@ -134,51 +152,61 @@ export default function MealRecordPage() {
   const handleDateChange = (event) => {
     setSelectedDate(event.target.value);
     setEditingMeal(null);
+    setFormResetKey((prev) => prev + 1);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMeal(null);
+    setFormResetKey((prev) => prev + 1);
   };
 
   return (
-    <main className="min-h-screen bg-slate-50 px-6 py-10">
-      <section className="mx-auto max-w-6xl">
-        <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="mb-1 text-sm font-semibold text-emerald-600">
-              profileId: {profileId}
-            </p>
-            <h1 className="text-2xl font-bold text-slate-900">식단 기록</h1>
-            <p className="mt-2 text-slate-500">
-              오늘 먹은 식단을 등록하고 날짜별 식단 목록을 관리합니다.
-            </p>
+    <main className="px-5 py-10 md:px-8">
+      <section className="mx-auto max-w-7xl space-y-6">
+        <PageHero
+          eyebrow="week 3 meal records"
+          title="오늘의 식단을 기록하고 대시보드에 바로 반영하세요"
+          description="등록한 식단은 날짜별로 조회되며, 대시보드에서 목표 대비 실제 섭취량으로 자동 합산됩니다."
+          actions={
+            <>
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={handleDateChange}
+                className="rounded-2xl border border-slate-200 bg-white px-4 py-3 font-semibold text-slate-700 shadow-sm outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+              />
+              <Link
+                to="/dashboard"
+                className="rounded-2xl bg-slate-900 px-5 py-3 text-center font-bold text-white transition hover:-translate-y-0.5 hover:bg-slate-800"
+              >
+                대시보드 확인
+              </Link>
+            </>
+          }
+        >
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+            <MetricCard label="profileId" value={profileId} helper="현재 저장된 프로필" />
+            <MetricCard label="식단 수" value={`${meals.length}건`} helper={selectedDate} tone="emerald" />
+            <MetricCard label="섭취 칼로리" value={formatKcal(totals.calories)} tone="sky" />
+            <MetricCard label="탄수화물" value={formatGram(totals.carbs)} />
+            <MetricCard label="단백질" value={formatGram(totals.protein)} />
           </div>
-
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={handleDateChange}
-              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-slate-700"
-            />
-            <Link
-              to="/dashboard"
-              className="rounded-xl bg-slate-800 px-4 py-2 text-center font-semibold text-white transition hover:bg-slate-900"
-            >
-              대시보드 확인
-            </Link>
-          </div>
-        </div>
+        </PageHero>
 
         {errorMessage && (
-          <div className="mb-5 whitespace-pre-line rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <StatusBanner type="error" title="식단 API 오류">
             {errorMessage}
-          </div>
+          </StatusBanner>
         )}
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[420px_1fr]">
           <MealRecordForm
+            key={`${editingMeal?.id || "new"}-${selectedDate}-${formResetKey}`}
             editingMeal={editingMeal}
             selectedDate={selectedDate}
             isSubmitting={isSubmitting}
             onSubmit={handleSubmit}
-            onCancel={() => setEditingMeal(null)}
+            onCancel={handleCancelEdit}
           />
 
           <MealRecordList

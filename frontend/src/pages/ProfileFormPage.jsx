@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/api";
+import PageHero from "../components/common/PageHero";
+import StatusBanner from "../components/common/StatusBanner";
+import { saveJsonToStorage } from "../utils/storage";
 
 const initialProfile = {
   name: "",
@@ -11,6 +14,8 @@ const initialProfile = {
   activityLevel: "",
   goalType: "",
 };
+
+const fieldClassName = "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100";
 
 function getApiErrorMessage(error) {
   const data = error.response?.data;
@@ -103,7 +108,7 @@ export default function ProfileFormPage() {
 
       const nutritionRequest = buildNutritionRequest(profileRequest);
       const nutritionResponse = await api.post("/nutrition/calculate", nutritionRequest);
-      localStorage.setItem("nutritionResult", JSON.stringify(nutritionResponse.data));
+      saveJsonToStorage("nutritionResult", nutritionResponse.data);
 
       navigate("/result", {
         state: {
@@ -120,111 +125,147 @@ export default function ProfileFormPage() {
   };
 
   return (
-    <main className="min-h-screen bg-slate-50 px-6 py-10">
-      <section className="max-w-3xl mx-auto bg-white rounded-2xl shadow-sm p-8">
-        <h1 className="text-2xl font-bold text-slate-900 mb-2">
-          프로필 입력
-        </h1>
-
-        <p className="text-slate-500 mb-8">
-          키, 몸무게, 나이, 성별, 활동량, 목표를 입력하면 프로필 저장 후 권장량을 계산합니다.
-        </p>
-
-        {errorMessage && (
-          <div className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 whitespace-pre-line">
-            {errorMessage}
+    <main className="px-5 py-10 md:px-8">
+      <section className="mx-auto max-w-5xl space-y-6">
+        <PageHero
+          eyebrow="profile setup"
+          title="내 몸에 맞는 권장량을 계산합니다"
+          description="입력한 정보는 프로필 저장 API와 권장량 계산 API에 순서대로 전달됩니다. 계산 결과는 결과 화면과 대시보드에서 함께 사용됩니다."
+        >
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+            <div className="rounded-2xl bg-white/80 px-4 py-3 text-sm font-semibold text-slate-600">1. 프로필 저장</div>
+            <div className="rounded-2xl bg-white/80 px-4 py-3 text-sm font-semibold text-slate-600">2. 목표별 권장량 계산</div>
+            <div className="rounded-2xl bg-white/80 px-4 py-3 text-sm font-semibold text-slate-600">3. 결과와 대시보드 반영</div>
           </div>
-        )}
+        </PageHero>
 
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <input
-            name="name"
-            value={profile.name}
-            onChange={handleChange}
-            className="border rounded-xl px-4 py-3"
-            placeholder="이름"
-          />
+        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
+          <div className="mb-6">
+            <h2 className="text-xl font-black text-slate-950">기본 정보 입력</h2>
+            <p className="mt-2 text-sm text-slate-500">
+              API 고정 필드명은 name, age, heightCm, weightKg, gender, activityLevel, goalType입니다.
+            </p>
+          </div>
 
-          <input
-            name="age"
-            type="number"
-            min="1"
-            max="120"
-            value={profile.age}
-            onChange={handleChange}
-            className="border rounded-xl px-4 py-3"
-            placeholder="나이"
-          />
+          {errorMessage && (
+            <div className="mb-5">
+              <StatusBanner type="error" title="입력 또는 API 오류">
+                {errorMessage}
+              </StatusBanner>
+            </div>
+          )}
 
-          <input
-            name="heightCm"
-            type="number"
-            min="50"
-            max="250"
-            step="0.1"
-            value={profile.heightCm}
-            onChange={handleChange}
-            className="border rounded-xl px-4 py-3"
-            placeholder="키(cm)"
-          />
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-5 md:grid-cols-2">
+            <label>
+              <span className="mb-1 block text-sm font-semibold text-slate-700">이름</span>
+              <input
+                name="name"
+                value={profile.name}
+                onChange={handleChange}
+                className={fieldClassName}
+                placeholder="고상준"
+              />
+            </label>
 
-          <input
-            name="weightKg"
-            type="number"
-            min="20"
-            max="300"
-            step="0.1"
-            value={profile.weightKg}
-            onChange={handleChange}
-            className="border rounded-xl px-4 py-3"
-            placeholder="몸무게(kg)"
-          />
+            <label>
+              <span className="mb-1 block text-sm font-semibold text-slate-700">나이</span>
+              <input
+                name="age"
+                type="number"
+                min="1"
+                max="120"
+                value={profile.age}
+                onChange={handleChange}
+                className={fieldClassName}
+                placeholder="27"
+              />
+            </label>
 
-          <select
-            name="gender"
-            value={profile.gender}
-            onChange={handleChange}
-            className="border rounded-xl px-4 py-3"
-          >
-            <option value="">성별 선택</option>
-            <option value="MALE">남성</option>
-            <option value="FEMALE">여성</option>
-          </select>
+            <label>
+              <span className="mb-1 block text-sm font-semibold text-slate-700">키(cm)</span>
+              <input
+                name="heightCm"
+                type="number"
+                min="50"
+                max="250"
+                step="0.1"
+                value={profile.heightCm}
+                onChange={handleChange}
+                className={fieldClassName}
+                placeholder="172"
+              />
+            </label>
 
-          <select
-            name="activityLevel"
-            value={profile.activityLevel}
-            onChange={handleChange}
-            className="border rounded-xl px-4 py-3"
-          >
-            <option value="">활동량 선택</option>
-            <option value="LOW">낮음</option>
-            <option value="NORMAL">보통</option>
-            <option value="HIGH">높음</option>
-            <option value="VERY_HIGH">매우 높음</option>
-          </select>
+            <label>
+              <span className="mb-1 block text-sm font-semibold text-slate-700">몸무게(kg)</span>
+              <input
+                name="weightKg"
+                type="number"
+                min="20"
+                max="300"
+                step="0.1"
+                value={profile.weightKg}
+                onChange={handleChange}
+                className={fieldClassName}
+                placeholder="70"
+              />
+            </label>
 
-          <select
-            name="goalType"
-            value={profile.goalType}
-            onChange={handleChange}
-            className="border rounded-xl px-4 py-3 md:col-span-2"
-          >
-            <option value="">목표 선택</option>
-            <option value="DIET">다이어트</option>
-            <option value="MAINTAIN">유지</option>
-            <option value="BULK_UP">벌크업</option>
-            <option value="HIGH_PROTEIN">고단백</option>
-          </select>
+            <label>
+              <span className="mb-1 block text-sm font-semibold text-slate-700">성별</span>
+              <select
+                name="gender"
+                value={profile.gender}
+                onChange={handleChange}
+                className={fieldClassName}
+              >
+                <option value="">성별 선택</option>
+                <option value="MALE">남성</option>
+                <option value="FEMALE">여성</option>
+              </select>
+            </label>
 
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="md:col-span-2 bg-emerald-500 text-white rounded-xl py-3 font-semibold hover:bg-emerald-600 transition disabled:cursor-not-allowed disabled:bg-slate-300"
-          >
-            {isLoading ? "계산 중..." : "권장량 계산하기"}
-          </button>
-        </form>
+            <label>
+              <span className="mb-1 block text-sm font-semibold text-slate-700">활동량</span>
+              <select
+                name="activityLevel"
+                value={profile.activityLevel}
+                onChange={handleChange}
+                className={fieldClassName}
+              >
+                <option value="">활동량 선택</option>
+                <option value="LOW">낮음</option>
+                <option value="NORMAL">보통</option>
+                <option value="HIGH">높음</option>
+                <option value="VERY_HIGH">매우 높음</option>
+              </select>
+            </label>
+
+            <label className="md:col-span-2">
+              <span className="mb-1 block text-sm font-semibold text-slate-700">목표</span>
+              <select
+                name="goalType"
+                value={profile.goalType}
+                onChange={handleChange}
+                className={fieldClassName}
+              >
+                <option value="">목표 선택</option>
+                <option value="DIET">다이어트</option>
+                <option value="MAINTAIN">유지</option>
+                <option value="BULK_UP">벌크업</option>
+                <option value="HIGH_PROTEIN">고단백</option>
+              </select>
+            </label>
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="rounded-2xl bg-emerald-500 py-4 font-black text-white shadow-sm shadow-emerald-200 transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:bg-slate-300 md:col-span-2"
+            >
+              {isLoading ? "저장하고 계산하는 중..." : "프로필 저장 후 권장량 계산하기"}
+            </button>
+          </form>
+        </section>
       </section>
     </main>
   );

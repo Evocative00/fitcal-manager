@@ -2,7 +2,17 @@
 
 개인 맞춤형 **식단 및 칼로리 관리 매니저** 프로젝트입니다.
 
-사용자의 신체 정보와 목표를 입력받아 하루 권장 칼로리와 탄단지 권장량을 계산하고, 이후 식단 기록과 대시보드 기능으로 확장할 예정입니다.
+사용자의 신체 정보와 목표를 입력받아 하루 권장 칼로리와 탄단지 권장량을 계산하고, 식단 기록을 대시보드에 연결해 목표 대비 실제 섭취량을 확인할 수 있습니다.
+
+---
+
+## 핵심 기능
+
+- 프로필 저장: 이름, 나이, 키, 몸무게, 성별, 활동량, 목표 저장
+- 권장량 계산: Strategy 패턴으로 목표별 칼로리/탄단지 계산
+- 식단 기록: 날짜별 식단 생성, 조회, 수정, 삭제
+- 하루 섭취량 요약: 칼로리, 탄수화물, 단백질, 지방 합산
+- 대시보드: 목표 대비 실제 섭취량, 진행률, 피드백, 탄단지 차트 표시
 
 ---
 
@@ -24,19 +34,14 @@
 - Spring Boot
 - Spring Data JPA
 - Validation
-- Lombok
 - MySQL Connector
+- H2 테스트 DB
 
-### Database
+### Database / Environment
 
 - MySQL 8.4
-- Docker Container로 실행
-
-### DevOps / Environment
-
-- Docker
 - Docker Compose
-- GitHub
+- GitHub Flow
 
 ---
 
@@ -74,15 +79,52 @@ npm run dev
 
 ---
 
-## 2주차 핵심 사용자 흐름
+## 최종 사용자 흐름
 
 ```text
-/profile 프로필 입력
+/ 홈 화면
+→ /profile 프로필 입력
 → POST /api/profiles 프로필 저장
 → POST /api/nutrition/calculate 권장량 계산
 → /result 실제 계산 결과 표시
-→ localStorage nutritionResult 저장
-→ /dashboard 목표 칼로리와 탄단지 목표 반영
+→ /meals 날짜별 식단 등록/조회/수정/삭제
+→ /dashboard 실제 섭취량과 목표 대비 진행률 확인
+```
+
+프론트는 다음 localStorage key를 사용합니다.
+
+```text
+profileId
+nutritionResult
+```
+
+---
+
+## 주요 API
+
+### 프로필
+
+```http
+POST /api/profiles
+GET /api/profiles
+GET /api/profiles/{id}
+```
+
+### 권장량 계산
+
+```http
+POST /api/nutrition/calculate
+```
+
+### 식단 기록
+
+```http
+POST /api/meals
+GET /api/meals?profileId={profileId}&date={yyyy-MM-dd}
+GET /api/meals/{id}
+PUT /api/meals/{id}
+DELETE /api/meals/{id}
+GET /api/meals/summary?profileId={profileId}&date={yyyy-MM-dd}
 ```
 
 ---
@@ -90,9 +132,39 @@ npm run dev
 ## API 명세 및 문서
 
 - [2주차 API 명세](docs/API_SPEC_WEEK2.md)
-- [2주차 상준 담당 통합 체크리스트](docs/WEEK2_INTEGRATION_CHECKLIST.md)
-- [3주차 식단 기록 API 명세 초안](docs/MEAL_RECORD_API_DRAFT.md)
+- [3주차 API 명세](docs/API_SPEC_WEEK3.md)
+- [식단 기록 API 명세](docs/MEAL_RECORD_API_DRAFT.md)
+- [2주차 통합 체크리스트](docs/WEEK2_INTEGRATION_CHECKLIST.md)
+- [3주차 통합 체크리스트](docs/WEEK3_INTEGRATION_CHECKLIST.md)
+- [4주차 최종 체크리스트](docs/WEEK4_FINAL_CHECKLIST.md)
 - [AI 활용 기록 취합 양식](docs/AI_USAGE_LOG_TEMPLATE.md)
+
+---
+
+## 테스트
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm run lint
+npm run build
+```
+
+### Backend
+
+```bash
+cd backend
+./gradlew test
+```
+
+Windows:
+
+```powershell
+cd backend
+.\gradlew.bat test
+```
 
 ---
 
@@ -102,7 +174,7 @@ npm run dev
 fitcal-manager/
 ├─ backend/          # Spring Boot 백엔드
 ├─ frontend/         # React 프론트엔드
-├─ docs/             # API 명세, 통합 체크리스트, 3주차 설계 초안
+├─ docs/             # API 명세, 통합 체크리스트, AI 활용 기록 양식
 ├─ docker-compose.yml
 ├─ README.md
 └─ .gitignore

@@ -1,10 +1,26 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { todayString } from "../../utils/formatters";
 
 const mealTypeOptions = [
   { value: "BREAKFAST", label: "아침" },
   { value: "LUNCH", label: "점심" },
   { value: "DINNER", label: "저녁" },
   { value: "SNACK", label: "간식" },
+];
+
+const mealPresets = [
+  {
+    label: "닭가슴살 샐러드",
+    values: { foodName: "닭가슴살 샐러드", mealType: "LUNCH", calories: 430, carbsG: 35, proteinG: 45, fatG: 14 },
+  },
+  {
+    label: "현미밥 식단",
+    values: { foodName: "현미밥과 닭가슴살", mealType: "DINNER", calories: 520, carbsG: 65, proteinG: 38, fatG: 12 },
+  },
+  {
+    label: "단백질 간식",
+    values: { foodName: "그릭요거트와 견과류", mealType: "SNACK", calories: 280, carbsG: 22, proteinG: 20, fatG: 12 },
+  },
 ];
 
 const emptyForm = {
@@ -14,12 +30,12 @@ const emptyForm = {
   proteinG: "",
   carbsG: "",
   fatG: "",
-  recordedDate: new Date().toISOString().slice(0, 10),
+  recordedDate: todayString(),
 };
 
-function buildFormFromMeal(meal) {
+function buildFormFromMeal(meal, selectedDate) {
   if (!meal) {
-    return emptyForm;
+    return { ...emptyForm, recordedDate: selectedDate };
   }
 
   return {
@@ -29,7 +45,7 @@ function buildFormFromMeal(meal) {
     proteinG: String(meal.proteinG ?? ""),
     carbsG: String(meal.carbsG ?? ""),
     fatG: String(meal.fatG ?? ""),
-    recordedDate: meal.recordedDate || new Date().toISOString().slice(0, 10),
+    recordedDate: meal.recordedDate || selectedDate,
   };
 }
 
@@ -38,23 +54,25 @@ function toNumber(value) {
 }
 
 export default function MealRecordForm({ editingMeal, selectedDate, isSubmitting, onSubmit, onCancel }) {
-  const [form, setForm] = useState({ ...emptyForm, recordedDate: selectedDate });
+  const [form, setForm] = useState(() => buildFormFromMeal(editingMeal, selectedDate));
   const [validationMessage, setValidationMessage] = useState("");
-
-  useEffect(() => {
-    if (editingMeal) {
-      setForm(buildFormFromMeal(editingMeal));
-      setValidationMessage("");
-      return;
-    }
-
-    setForm({ ...emptyForm, recordedDate: selectedDate });
-    setValidationMessage("");
-  }, [editingMeal, selectedDate]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const applyPreset = (preset) => {
+    setValidationMessage("");
+    setForm((prev) => ({
+      ...prev,
+      ...preset.values,
+      calories: String(preset.values.calories),
+      carbsG: String(preset.values.carbsG),
+      proteinG: String(preset.values.proteinG),
+      fatG: String(preset.values.fatG),
+      recordedDate: prev.recordedDate || selectedDate,
+    }));
   };
 
   const validate = () => {
@@ -117,14 +135,17 @@ export default function MealRecordForm({ editingMeal, selectedDate, isSubmitting
   };
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="mb-5 flex items-center justify-between gap-3">
+    <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="mb-5 flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold text-slate-900">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-600">
+            meal log
+          </p>
+          <h2 className="mt-2 text-xl font-black text-slate-950">
             {editingMeal ? "식단 수정" : "식단 등록"}
           </h2>
           <p className="mt-1 text-sm text-slate-500">
-            칼로리와 탄수화물, 단백질, 지방 섭취량을 기록합니다.
+            자주 먹는 식단은 추천 버튼으로 빠르게 채울 수 있습니다.
           </p>
         </div>
 
@@ -132,97 +153,133 @@ export default function MealRecordForm({ editingMeal, selectedDate, isSubmitting
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100"
+            className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-600 transition hover:bg-slate-100"
           >
             수정 취소
           </button>
         )}
       </div>
 
+      {!editingMeal && (
+        <div className="mb-5 flex flex-wrap gap-2">
+          {mealPresets.map((preset) => (
+            <button
+              key={preset.label}
+              type="button"
+              onClick={() => applyPreset(preset)}
+              className="rounded-full border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 transition hover:bg-emerald-100"
+            >
+              + {preset.label}
+            </button>
+          ))}
+        </div>
+      )}
+
       {validationMessage && (
-        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {validationMessage}
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <input
-          name="foodName"
-          value={form.foodName}
-          onChange={handleChange}
-          className="rounded-xl border px-4 py-3"
-          placeholder="음식명"
-        />
+        <label className="md:col-span-2">
+          <span className="mb-1 block text-sm font-semibold text-slate-700">음식명</span>
+          <input
+            name="foodName"
+            value={form.foodName}
+            onChange={handleChange}
+            className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+            placeholder="예: 닭가슴살 샐러드"
+          />
+        </label>
 
-        <select
-          name="mealType"
-          value={form.mealType}
-          onChange={handleChange}
-          className="rounded-xl border px-4 py-3"
-        >
-          {mealTypeOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+        <label>
+          <span className="mb-1 block text-sm font-semibold text-slate-700">식사 유형</span>
+          <select
+            name="mealType"
+            value={form.mealType}
+            onChange={handleChange}
+            className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+          >
+            {mealTypeOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
 
-        <input
-          name="recordedDate"
-          type="date"
-          value={form.recordedDate}
-          onChange={handleChange}
-          className="rounded-xl border px-4 py-3"
-        />
+        <label>
+          <span className="mb-1 block text-sm font-semibold text-slate-700">기록 날짜</span>
+          <input
+            name="recordedDate"
+            type="date"
+            value={form.recordedDate}
+            onChange={handleChange}
+            className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+          />
+        </label>
 
-        <input
-          name="calories"
-          type="number"
-          min="1"
-          step="0.1"
-          value={form.calories}
-          onChange={handleChange}
-          className="rounded-xl border px-4 py-3"
-          placeholder="칼로리(kcal)"
-        />
+        <label>
+          <span className="mb-1 block text-sm font-semibold text-slate-700">칼로리</span>
+          <input
+            name="calories"
+            type="number"
+            min="1"
+            step="0.1"
+            value={form.calories}
+            onChange={handleChange}
+            className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+            placeholder="kcal"
+          />
+        </label>
 
-        <input
-          name="carbsG"
-          type="number"
-          min="0"
-          step="0.1"
-          value={form.carbsG}
-          onChange={handleChange}
-          className="rounded-xl border px-4 py-3"
-          placeholder="탄수화물(g)"
-        />
+        <label>
+          <span className="mb-1 block text-sm font-semibold text-slate-700">탄수화물</span>
+          <input
+            name="carbsG"
+            type="number"
+            min="0"
+            step="0.1"
+            value={form.carbsG}
+            onChange={handleChange}
+            className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+            placeholder="g"
+          />
+        </label>
 
-        <input
-          name="proteinG"
-          type="number"
-          min="0"
-          step="0.1"
-          value={form.proteinG}
-          onChange={handleChange}
-          className="rounded-xl border px-4 py-3"
-          placeholder="단백질(g)"
-        />
+        <label>
+          <span className="mb-1 block text-sm font-semibold text-slate-700">단백질</span>
+          <input
+            name="proteinG"
+            type="number"
+            min="0"
+            step="0.1"
+            value={form.proteinG}
+            onChange={handleChange}
+            className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+            placeholder="g"
+          />
+        </label>
 
-        <input
-          name="fatG"
-          type="number"
-          min="0"
-          step="0.1"
-          value={form.fatG}
-          onChange={handleChange}
-          className="rounded-xl border px-4 py-3 md:col-span-2"
-          placeholder="지방(g)"
-        />
+        <label>
+          <span className="mb-1 block text-sm font-semibold text-slate-700">지방</span>
+          <input
+            name="fatG"
+            type="number"
+            min="0"
+            step="0.1"
+            value={form.fatG}
+            onChange={handleChange}
+            className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+            placeholder="g"
+          />
+        </label>
 
         <button
           type="submit"
           disabled={isSubmitting}
-          className="rounded-xl bg-emerald-500 py-3 font-semibold text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:bg-slate-300 md:col-span-2"
+          className="rounded-2xl bg-emerald-500 py-3 font-black text-white shadow-sm shadow-emerald-200 transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:bg-slate-300 md:col-span-2"
         >
           {isSubmitting ? "저장 중..." : editingMeal ? "식단 수정하기" : "식단 등록하기"}
         </button>
